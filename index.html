@@ -1,0 +1,80 @@
+<html>
+<head>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+</head>
+
+<canvas id="canvas" height="1000" width="1300" style="border:1px solid #000000;"></canvas>
+
+<script>
+	const $canvas = $("#canvas");
+	const canvas = $canvas[0];
+	const c = canvas.getContext("2d");
+
+	function Node(parent, div)
+    {
+    	this.div = div;
+    	this.parent = parent;
+    	//this.leftChild = null;
+    	//this.rightChild = null;
+    	//this.totNumbers = 0;
+    	//this.totWeight = 0;
+    }
+    function Leaf(parent, data)
+    {
+        this.data = data;
+        this.parent = parent;
+        this.totNumbers = 1;
+        this.totWeight = data;
+    }
+
+    function buildTree(parent, list)
+    {
+    	let thisNode;
+    	if(list.length == 0)
+    		console.log("SHIT FAM!");
+        if(list.length == 1)
+        {
+        	console.log("leafy");
+        	thisNode = new Leaf(parent, list[0]);
+        }
+        else
+        {
+        	const divIndex = Math.floor((list.length-1)/2);
+	        const div = list[divIndex];
+	        thisNode = new Node(parent, div);
+            thisNode.leftChild = buildTree(thisNode, list.slice(0, divIndex+1));
+	        thisNode.rightChild = buildTree(thisNode, list.slice(divIndex+1, list.length));
+	        thisNode.totWeight = leftChild.totWeight + rightChild.totWeight;
+	        thisNode.totNumbers = leftChild.totNumbers + rightChild.totNumbers;
+        }
+        console.log(thisNode);
+        return thisNode;
+    }
+
+	function drawTree(tree, midpoint, top)
+	{
+		c.rect(midpoint-20, top, midpoint+20, top + 40)
+		c.stroke();
+		if(tree.totNumbers > 1)
+		{
+			c.beginPath();
+			c.moveTo(midpoint, top+40);
+			c.lineTo(midpoint/2, top+80);
+			c.stroke();
+
+			c.beginPath();
+			c.moveTo(midpoint, top+40);
+			c.lineTo(midpoint + midpoint/2, top+80);
+			c.stroke();
+			drawTree(tree.leftChild, midpoint/2, top+80);
+			drawTree(tree.rightChild, midpoint + midpoint/2, top+80);
+		}
+	}
+
+	const list = [1,2,3,4,5,6,7,8];
+	const a = buildTree(null, list);
+	drawTree(a, canvas.width/2, 0);
+
+</script>
+
+</html>
