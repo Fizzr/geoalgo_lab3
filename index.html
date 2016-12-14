@@ -3,21 +3,30 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
 </head>
 
-<canvas id="canvas" height="1000" width="1300" style="border:1px solid #000000;"></canvas>
+<div id="canvasContainer" style="display: table-row;">
+    <!--div style="display: table-cell;">
+        <canvas id="canvas" height="1000" width="1300" style="border:1px solid #000000;"></canvas>
+    </div-->
+</div>
 
 <script>
-	const $canvas = $("#canvas");
+	/*const $canvas = $("#canvas");
 	const canvas = $canvas[0];
 	const c = canvas.getContext("2d");
+	*/
+	let c;
+	const maxWidth = 32767;
+	const nodeWidth = 40;
+	const nodeHeight = 40;
 
 	function Node(parent, div)
     {
     	this.div = div;
     	this.parent = parent;
-    	//this.leftChild = null;
-    	//this.rightChild = null;
-    	//this.totNumbers = 0;
-    	//this.totWeight = 0;
+    	this.leftChild = null;
+    	this.rightChild;
+    	this.totNumbers = 0;
+    	this.totWeight = 0;
     }
     function Leaf(parent, data)
     {
@@ -34,7 +43,6 @@
     		console.log("SHIT FAM!");
         if(list.length == 1)
         {
-        	console.log("leafy");
         	thisNode = new Leaf(parent, list[0]);
         }
         else
@@ -44,36 +52,270 @@
 	        thisNode = new Node(parent, div);
             thisNode.leftChild = buildTree(thisNode, list.slice(0, divIndex+1));
 	        thisNode.rightChild = buildTree(thisNode, list.slice(divIndex+1, list.length));
-	        thisNode.totWeight = leftChild.totWeight + rightChild.totWeight;
-	        thisNode.totNumbers = leftChild.totNumbers + rightChild.totNumbers;
+	        thisNode.totWeight = thisNode.leftChild.totWeight + thisNode.rightChild.totWeight;
+	        thisNode.totNumbers = thisNode.leftChild.totNumbers + thisNode.rightChild.totNumbers;
         }
-        console.log(thisNode);
         return thisNode;
     }
 
-	function drawTree(tree, midpoint, top)
+    let context = [];
+	let canvases = [];
+
+	function drawTree(tree)
 	{
-		c.rect(midpoint-20, top, midpoint+20, top + 40)
-		c.stroke();
+		const n = tree.totNumbers;
+		const width = n * nodeWidth * 2;
+		const height = Math.ceil(Math.log2(n)+1) * (nodeHeight * 2);
+		const canvNum = Math.ceil(width / maxWidth);
+        const rest = width % maxWidth;
+
+		for (let i = 0; i < canvNum; i++)
+		{
+			$("#canvasContainer")
+				.append($("<div/>")
+					.css("display", "table-cell")
+					.append($("<canvas/>")
+						.attr("id", "canvas"+i)));
+			let canvas = $("#canvas"+i)[0];
+			canvases.push(canvas);
+			context.push(canvas.getContext("2d"));
+			if(i == canvNum-1 && rest != 0)
+            	canvas.width = rest;
+            else
+                canvas.width = maxWidth;
+            canvas.height = height;    //would need 7*10^30 values to exceed max allowed height
+		}
+
+		recursiveTreeDraw(tree, 0, width, width/2, 0)
+	}
+
+	//function for drawing boxes over several canvases (Big canvas)
+    // assumes only 2 canvases affected
+	function  bigRect(x, y, w, h)
+	{
+		const cIndex = Math.floor(x/maxWidth);
+        const c = context[cIndex];
+        const adjX = x % maxWidth;
+        c.rect(adjX, y, w, h);
+        c.stroke();
+        if(adjX+w > maxWidth)
+        {
+        	const c2 = context[cIndex+1];
+        	c2.rect(adjX - maxWidth, y, w, h);
+        	c2.stroke();
+        }
+	}
+
+	//function for filling boxes over several canvases (Big canvas)
+	function bigFillRect(x, y, w, h, colour)
+    {
+
+        const cIndex = Math.floor(x/maxWidth);
+        const c = context[cIndex];
+		c.fillStyle = colour;
+		const adjX = x % maxWidth;
+		c.fillRect(adjX, y, w, h);
+		if(adjX+w > maxWidth)
+		{
+			const c2 = context[cIndex+1];
+			c2.fillRect(adjX - maxWidth, y, w, h);
+		}
+
+	}
+
+	//function for drawing text over several canvases (Big canvas)
+    // no functionality for if text supercedes the line of a canvas currently
+	function bigText(string, x, y, max, colour, font)
+    {
+	    const cIndex = Math.floor(x/maxWidth);
+	    const c = context[cIndex];
+	    c.fillStyle = colour;
+	    c.font = font;
+	    const adjX = x % maxWidth;
+	    c.fillText(string, adjX, y, max);
+	    if (adjX + max >= maxWidth)
+	    {
+	    	const c2 = context[cIndex+1];
+	    	c2.fillText(string, adjX-maxWidth, y, max);
+	    }
+    }
+
+	//function for drawing lines over several canvases (Big canvas)
+    //Can draw over more than two canvases
+    function bigLine(x1, y1, x2, y2)
+    {
+	    const c1Index = Math.floor(x1/maxWidth);
+	    const c2Index = Math.floor(x2/maxWidth);
+	    if(c1Index != c2Index)
+        {
+        	let from;
+        	let to;
+            if(c1Index < c2Index)
+            {
+            	from = c1Index;
+                to = c2Index;
+            }
+            else
+            {
+            	from = c2Index;
+            	to = c1Index;
+            }
+            for (let i = from; i <= to; i++)
+            {
+            	const adjX1 = x1 - (maxWidth * i);
+            	const adjX2 = x2 - (maxWidth * i);
+            	let c = context[i];
+            	c.beginPath();
+            	c.moveTo(adjX1, y1);
+            	c.lineTo(adjX2, y2);
+            	c.stroke();
+            }
+        }
+        else
+        {
+        	c = context[c1Index];
+        	const adjX1 = x1 % maxWidth;
+        	const adjX2 = x2 % maxWidth;
+        	c.beginPath();
+        	c.moveTo(adjX1, y1);
+        	c.lineTo(adjX2, y2);
+        	c.stroke();
+        }
+
+
+    }
+
+	function recursiveTreeDraw(tree, smallest, biggest, mid, top)
+	{
+		bigRect(mid-(nodeWidth/2), top, nodeWidth, nodeHeight);
+
+		if(tree.div != undefined)
+		{
+			const col = "#000000";
+			const font = "12px Arial";
+			bigText("d: " + tree.div, mid - (nodeWidth/2) +3, top + 15, nodeWidth -3, col, font);
+			bigText("n: " + tree.totNumbers, mid - (nodeWidth/2) +3, top + 25, nodeWidth -3, col, font);
+			bigText("w: " + tree.totWeight, mid - (nodeWidth/2) +3, top + 35, nodeWidth -3, col, font);
+		}
+		else
+		{
+			bigFillRect(mid-(nodeWidth/2), top, nodeWidth, nodeHeight, "#00ff36");
+			bigText(tree.totWeight, mid - (nodeWidth/2) +3, top+20, nodeWidth -3, "#000000", "20px Arial");
+		}
 		if(tree.totNumbers > 1)
 		{
-			c.beginPath();
-			c.moveTo(midpoint, top+40);
-			c.lineTo(midpoint/2, top+80);
+			//left
+            bigLine(mid, top+40, ((mid-smallest)/2) + smallest, top+80);
+			/*c.beginPath();
+			c.moveTo(mid, top+40);
+			c.lineTo(, top+80);
 			c.stroke();
-
-			c.beginPath();
-			c.moveTo(midpoint, top+40);
-			c.lineTo(midpoint + midpoint/2, top+80);
+			*/
+			//right
+            bigLine(mid, top+40, ((biggest-mid)/2) + mid, top+80);
+			/*c.beginPath();
+			c.moveTo(mid, top+40);
+			c.lineTo(((biggest-mid)/2) + mid, top+80);
 			c.stroke();
-			drawTree(tree.leftChild, midpoint/2, top+80);
-			drawTree(tree.rightChild, midpoint + midpoint/2, top+80);
+*/
+			recursiveTreeDraw(tree.leftChild, smallest, mid,(mid-smallest)/2+ smallest, top+80);
+			recursiveTreeDraw(tree.rightChild, mid, biggest, ((biggest-mid)/2)+ mid, top+80);
 		}
 	}
 
-	const list = [1,2,3,4,5,6,7,8];
-	const a = buildTree(null, list);
-	drawTree(a, canvas.width/2, 0);
+	function findSplit(tree, small, big)
+    {
+    	if(!(tree.totNumbers == 1) && (small > tree.div || big <= tree.div))
+        {
+            if(big <= tree.div)
+            	return findSplit(tree.leftChild, small, big);
+            else
+            	return findSplit(tree.rightChild, small, big);
+        }
+        else
+        	return tree;
+    }
+
+    function takeAll(tree)
+    {
+        let list = [];
+        if(tree.totNumbers == 1)
+        	list.push(tree.totWeight);
+        else
+        {
+	        list = list.concat(takeAll(tree.leftChild));
+	        list = list.concat(takeAll(tree.rightChild));
+        }
+        return list;
+    }
+    function search (tree, x, left)
+    {
+    	let list = [];
+    	if(tree.totNumbers == 1)
+        {
+        	if(left)        //Will never be reached while going left...
+	        {
+		        if (tree.totWeight >= x)
+			        list.push(tree.totWeight);
+	        }
+	        else
+        	    if(tree.totWeight <= x)
+        			list.push(tree.totWeight);
+        }
+        else
+        {
+        	if(!left)
+            {
+                if(tree.div == x)
+                	list = list.concat(takeAll(tree.leftChild));
+                else if(tree.div < x)
+                {
+	                list = list.concat(takeAll(tree.leftChild));
+	                list = list.concat(search(tree.rightChild, x, left));
+                }
+                else
+	                list = list.concat(search(tree.leftChild, x, left));
+            }
+            else
+            {
+            	if(tree.div == x)
+	            {
+		            list.push(x);
+		            list = list.concat(takeAll(tree.rightChild));
+	            }
+                else if(tree.div < x)
+                {
+	                list = list.concat(search(tree.rightChild, x, left));
+                }
+                else
+                {
+	                list = list.concat(search(tree.leftChild, x, left));
+	                list = list.concat(takeAll(tree.rightChild, x, left));
+                }
+            }
+        }
+	    //console.log(list);
+        return list;
+    }
+    
+    function OneDRangeTree(tree, small, big)
+    {
+        const split = findSplit(tree, small, big);
+        let res = [];
+        res = res.concat(search(split.leftChild, small, true));
+        res = res.concat(search(split.rightChild, big, false));
+        return res;
+    }
+
+	//const list = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16, 17, 18, 19, 20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66];
+	let list = [];
+	for (let i = 0; i < 100; i++)
+    {
+    	list.push(i);
+    }
+    const a = buildTree(null, list);
+	drawTree(a);
+	console.log(OneDRangeTree(a, 22, 82));
 
 </script>
 
