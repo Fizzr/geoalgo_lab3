@@ -27,6 +27,8 @@
         <input id="min" type="number" class="num">
         Max length:
         <input id="max" type="number" class="num">
+        <span id="truths"></span>
+        <span id="falses"></span>
     </div>
 </div>
 <div id="canvasContainer" style="display: table-row;">
@@ -90,6 +92,27 @@
 		const num = parseInt($("#num").val());
 		const min = parseInt($("#min").val());
 		const max = parseInt($("#max").val());
+
+		let truths = 0;
+		let falses = 0;
+		const $truElem = $("#truths");
+		const $falsElem= $("#falses");
+
+		for (let i = 0; i < num; i++)
+        {
+        	const len = min + Math.floor(Math.random() * (max-min));
+        	const least = 1;
+        	const most = least + Math.floor(Math.random() * len/10);
+        	const small = Math.floor(Math.random() * len);
+        	const big = small + Math.floor(Math.random() * len - small);
+        	const res =test(len,Math.floor(Math.random()*len), least, most, small, big);
+            if(res)
+            	truths++;
+            else
+            	falses++;
+            $truElem.text("True: "+ truths);
+            $falsElem.text("False: "+ falses);
+        }
 	});
 
 	function Node(parent, div)
@@ -557,7 +580,6 @@
         		ans.push(random);
         }
         const tree = buildTree(null, list);
-    	drawTree(tree);
     	const treeAns = OneDRangeQuery(tree, small, big);
     	const treeNum = numberInRange(tree, small, big, false);
     	const treeWeight = weightInRange(tree, small, big, false);
