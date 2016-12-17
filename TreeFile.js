@@ -1,3 +1,4 @@
+
 function Node(parent, div)
 {
 	this.div = div;
