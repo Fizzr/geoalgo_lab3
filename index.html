@@ -1,6 +1,7 @@
 <html>
 <head>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+    <script src="TreeFile.js"></script>
     <link rel="stylesheet" type="text/css" href="style.css">
 </head>
 <div style="border: 1px solid #000000; padding: 3px;" >
@@ -66,9 +67,6 @@
 
 	$("#build").click(function ()
 	{
-		$("#canvasContainer").empty();
-		canvases.length = 0;
-		context.length = 0;
 		const len = parseInt($("#len").val());
 		const start = parseInt($("#start").val());
 		const least = parseInt($("#least").val());
@@ -98,23 +96,61 @@
 		const $truElem = $("#truths");
 		const $falsElem= $("#falses");
 
+		/*let t1 = performance.now();
+		let t2;
+		let j = 0;
+		(function doCalc() {
+
+			const len = min + Math.floor(Math.random() * (max-min));
+			const least = 1;
+			const most = least + Math.floor(Math.random() * len/10);
+			const small = Math.floor(Math.random() * len);
+			const big = small + Math.ceil(Math.random() * len);
+			const res =test(len,Math.floor(Math.random()*len), least, most, small, big);
+			if(res)
+				truths++;
+			else
+			{
+				falses++;
+			}
+			$truElem.text("True: "+ truths);
+			$falsElem.text("False: "+ falses);
+			j++;
+			if (j < num)
+			{
+				setTimeout(doCalc, 0);
+			}
+			else
+            {
+            	t2 = performance.now();
+	            console.log(t2-t1);
+            }
+		})();
+*/
+		t3 = performance.now();
 		for (let i = 0; i < num; i++)
         {
         	const len = min + Math.floor(Math.random() * (max-min));
         	const least = 1;
         	const most = least + Math.floor(Math.random() * len/10);
         	const small = Math.floor(Math.random() * len);
-        	const big = small + Math.floor(Math.random() * len - small);
+        	const big = small + Math.ceil(Math.random() * len);
         	const res =test(len,Math.floor(Math.random()*len), least, most, small, big);
             if(res)
             	truths++;
             else
-            	falses++;
+            {
+	            falses++;
+                return;
+            }
             $truElem.text("True: "+ truths);
             $falsElem.text("False: "+ falses);
         }
+        t4 = performance.now();
+		console.log("for: " + (t4-t3));
 	});
 
+/*
 	function Node(parent, div)
     {
     	this.div = div;
@@ -131,6 +167,7 @@
         this.data = data;
         this.parent = parent;
         this.totNumbers = 1;
+        this.maxWeight = Math.round(Math.abs(Math.sin(data))*100000)/1000;
         this.x;
         this.y;
     }
@@ -141,28 +178,28 @@
     	if(list.length == 0)
     		console.log("SHIT FAM!");
         if(list.length == 1)
-        {
         	thisNode = new Leaf(parent, list[0]);
-        }
         else
         {
+
         	const divIndex = Math.floor((list.length-1)/2);
 	        const div = list[divIndex];
 	        thisNode = new Node(parent, div);
             thisNode.leftChild = buildTree(thisNode, list.slice(0, divIndex+1));
 	        thisNode.rightChild = buildTree(thisNode, list.slice(divIndex+1, list.length));
-	        if(thisNode.rightChild.totNumbers == 1)
-	            thisNode.maxWeight = thisNode.rightChild.data;
-            else
-	        	thisNode.maxWeight = thisNode.rightChild.maxWeight;
+            thisNode.maxWeight = (thisNode.rightChild.maxWeight > thisNode.leftChild.maxWeight ? thisNode.rightChild.maxWeight: thisNode.leftChild.maxWeight);
 	        thisNode.totNumbers = thisNode.leftChild.totNumbers + thisNode.rightChild.totNumbers;
         }
         return thisNode;
     }
+*/
 
 
 	function drawTree(tree)
 	{
+		$("#canvasContainer").empty();
+		canvases.length = 0;
+		context.length = 0;
 		const n = tree.totNumbers;
 		const width = nodeWidth * Math.pow(2, Math.ceil(Math.log2(n))) *1.1 ;
 		//const width = n * nodeWidth * 2;
@@ -256,14 +293,15 @@
 	    {
 		    const col = "#000000";
 		    const font = "12px Arial";
-		    bigText("d: " + tree.div, tree.x +3, tree.y + 15, nodeWidth -3, col, font);
-		    bigText("n: " + tree.totNumbers, tree.x +3, tree.y + 25, nodeWidth -3, col, font);
-		    bigText("w: " + tree.maxWeight, tree.x +3, tree.y + 35, nodeWidth -3, col, font);
+		    bigText("d: " + tree.div, tree.x +3, tree.y + 15, nodeWidth -4, col, font);
+		    bigText("n: " + tree.totNumbers, tree.x +3, tree.y + 25, nodeWidth -4, col, font);
+		    bigText("w: " + tree.maxWeight, tree.x +3, tree.y + 35, nodeWidth -4, col, font);
 	    }
 	    else
 	    {
 		    bigFillRect(tree.x, tree.y, nodeWidth, nodeHeight, "#00ff36");
-		    bigText(tree.data, tree.x +3, tree.y+20, nodeWidth -3, "#000000", "20px Arial");
+		    bigText(tree.data, tree.x +3, tree.y +18, nodeWidth -4, "#000000", "18px Arial");
+		    bigText(tree.maxWeight, tree.x +3, tree.y +38, nodeWidth -4, "#000000", "18px Arial");
 	    }
     }
 
@@ -333,6 +371,7 @@
 		}
 	}
 
+/*
 	function findSplit(tree, small, big)
     {
     	if(!(tree.totNumbers == 1) && (small > tree.div || big <= tree.div))
@@ -442,8 +481,6 @@
 
     function numberSearch (tree, x, left, drawing)
     {
-    	if(drawing)
-        	bigRect(tree.x, tree.y, nodeWidth, nodeHeight, "#ff8800");
     	let num = 0;
     	if(tree.totNumbers == 1)
 	    {
@@ -521,31 +558,62 @@
         return res;
     }
 
-    //VARJE GÅNG VI GÅR HÖGER RISKERAR VI HOPPA ÖVER NUMRET VI SÖKER! Jämför höger hopp med div, och ta div om höger är större än big
-    function weightSearch(tree, big, drawing)
+    function weightSearch(tree, x, left, drawing)
     {
+	    if(drawing)
+		    bigRect(tree.x, tree.y, nodeWidth, nodeHeight, "#ff8800");
     	if(tree.totNumbers == 1)
         {
-            return tree.data;
-        }
-        else if(tree.maxWeight == big)
-        	return big;
-        else
-        {
-        	if(tree.div == big)
-                return big;
-            else if(tree.div > big)
-            	return weightSearch(tree.leftChild, big, drawing);
+        	if(left)
+            {
+            	if(tree.data >= x)
+            		return tree.maxWeight;
+            	else
+            		return 0;
+            }
             else
             {
-            	let right = weightSearch(tree.rightChild, big, drawing);
-                if(right > big)
-                	return tree.div;
+            	if(tree.data <= x)
+            		return tree.maxWeight;
             	else
-            		return right;
+            		return 0;
             }
         }
-
+        else
+        {
+        	let leftWeight;
+        	let rightWeight;
+        	if(left)
+            {
+            	if(x <= tree.div)
+                {
+                	leftWeight = weightSearch(tree.leftChild, x, left, drawing);
+                	rightWeight = tree.rightChild.maxWeight;
+                }
+                else
+                	return weightSearch(tree.rightChild, x, left, drawing);
+            }
+            else
+            {
+            	if(x == tree.div)
+	            {
+		            return tree.leftChild.maxWeight;
+	            }
+	            else if(x < tree.div)
+	            {
+	            	return weightSearch(tree.leftChild, x, left, drawing);
+	            }
+	            else
+                {
+                	leftWeight = tree.leftChild.maxWeight;
+                	rightWeight = weightSearch(tree.rightChild, x, left, drawing);
+                }
+            }
+            if(leftWeight > rightWeight)
+            	return leftWeight;
+        	else
+        		return rightWeight;
+        }
     }
     function weightInRange(tree, small, big, drawing)
     {
@@ -553,17 +621,16 @@
     	if (split.totNumbers == 1)
         {
         	if(split.data >= small && split.data <= big)
-        		return split.data;
+        		return split.maxWeight;
         }
-        else if(split.maxWeight == big)
-            return big;
         else
         {
-	        let right = weightSearch(split.rightChild, big, drawing);
-	        if(right > big)
-		        return split.div;
+	        const left = weightSearch(split.leftChild, small, true, drawing);
+	        const right = weightSearch(split.rightChild, big, false, drawing);
+	        if(left > right)
+	        	return left;
 	        else
-		        return right;
+	        	return right;
         }
     }
     function test (len, start, least, most, small, big)
@@ -571,14 +638,23 @@
     	let lastNum = start;
     	let list = [];
     	let ans = [];
+    	let bigWeight = 0;
     	for (let i = 0; i < len; i++)
         {
         	const random = lastNum + least + Math.floor(Math.random()*(most-least));
         	lastNum = random;
         	list.push(random);
         	if(random >= small && random <= big)
-        		ans.push(random);
+	        {
+		        ans.push(random);
+		        const weight = Math.round(Math.abs(Math.sin(random)) * 100000) / 1000;
+		        if(weight > bigWeight)
+			        bigWeight = weight;
+
+	        }
         }
+        if(bigWeight == 0)
+        	bigWeight = undefined;
         const tree = buildTree(null, list);
     	const treeAns = OneDRangeQuery(tree, small, big);
     	const treeNum = numberInRange(tree, small, big, false);
@@ -589,8 +665,26 @@
         	if(ans[i] != treeAns[i])
         		correct = false;
         }
-        return (correct && (treeNum == ans.length) && (treeWeight == ans[ans.length-1]));
-    }
+        let lengthBool = (treeNum == ans.length);
+    	let weightBool = (treeWeight == bigWeight);
+    	if(!(correct && lengthBool && weightBool))
+        {
+        	drawTree(tree);
+	        weightInRange(tree, small, big, true);
+	        console.log(small + " - "+ big);
+        	console.log(correct);
+        	console.log(lengthBool);
+        	console.log(weightBool);
+        	console.log(ans);
+        	console.log(treeAns);
+        	console.log(ans.length);
+        	console.log(treeNum);
+        	console.log(bigWeight);
+        	console.log(treeWeight);
+        }
+
+        return (correct && lengthBool && weightBool);
+    }*/
 	//const list = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16, 17, 18, 19, 20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66];
 	/*let list = [];
 	let lastNum = 0;
@@ -605,7 +699,7 @@
 	console.log(OneDRangeQuery(a, 10, 30));
 	console.log(numberInRange(a, 10, 30, true));
 	console.log(weightInRange(a, 10,29, false));
-    */
+*/
 
 </script>
 
